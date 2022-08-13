@@ -4,9 +4,11 @@ namespace STT_CLI
 {
     class Program
     {
+        static STT stt;
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            stt = new STT(args[0]);
         }
     }
 }

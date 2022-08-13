@@ -10,25 +10,25 @@ namespace STT_CLI
             title = _title;
             icon = _icon;
         }
-        int num;
-        string title;
-        string icon;
+        public int num;
+        public string title;
+        public string icon;
     }
     public struct record
     {
-        public record(int _num, int _recordType_num, int _timeFrom, int _timeTo, string _comment)
+        public record(int _num, int _recordType_num, long _timeFrom, long _timeTo, string _comment) // current Unix time needs 41 unsigned bits (more than int32 can hold)
         {
             num = _num;
             recordType_num = _recordType_num;
-            timeFrom = _timeFrom;
+            timeFrom = _timeFrom; 
             timeTo = _timeTo;
             comment = _comment;
         }
-        int num;
-        int recordType_num;
-        int timeFrom;
-        int timeTo;
-        string comment;
+        public int num;
+        public int recordType_num;
+        public long timeFrom;
+        public long timeTo;
+        public string comment;
     }
     public struct category
     {
@@ -37,9 +37,9 @@ namespace STT_CLI
             num = _num;
             title = _title;
         }
-        int num;
-        string title;
-    }
+        public int num;
+        public string title;
+    } 
     public struct typeCategory
     {
         public typeCategory(int _recordType_num, int _category_num)
@@ -47,29 +47,29 @@ namespace STT_CLI
             recordType_num = _recordType_num;
             category_num = _category_num;
         }
-        int recordType_num;
-        int category_num;
+        public int recordType_num;
+        public int category_num;
     }
     public struct recordTag
     {
-        public recordTag(int _num, int _recordType_num, int _title)
+        public recordTag(int _num, int _recordType_num, string _title)
         {
             num = _num;
             recordType_num = _recordType_num;
             title = _title;
         }
-        int num;
-        int recordType_num;
-        int title;
+        public int num;
+        public int recordType_num;
+        public string title;
     }
     public struct recordToRecordTag
     {
-        public recordToRecordTag(int _record_num, int _recordTag_num)
+        public recordToRecordTag(long _record_num, int _recordTag_num)
         {
             record_num = _record_num;
             recordTag_num = _recordTag_num;
         }
-        int record_num;
-        int recordTag_num;
+        public long record_num;
+        public int recordTag_num;
     }
 }
