@@ -1,0 +1,8 @@
+{
+  "runtimeOptions": {
+    "additionalProbingPaths": [
+      "/home/zola/.dotnet/store/|arch|/|tfm|",
+      "/home/zola/.nuget/packages"
+    ]
+  }
+}

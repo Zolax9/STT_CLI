@@ -1,0 +1,11 @@
+/data/Projects/STT_CLI/obj/Debug/netcoreapp3.1/STT_CLI.csprojAssemblyReference.cache
+/data/Projects/STT_CLI/obj/Debug/netcoreapp3.1/STT_CLI.AssemblyInfoInputs.cache
+/data/Projects/STT_CLI/obj/Debug/netcoreapp3.1/STT_CLI.AssemblyInfo.cs
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI.deps.json
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI.runtimeconfig.json
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI.runtimeconfig.dev.json
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI.dll
+/data/Projects/STT_CLI/bin/Debug/netcoreapp3.1/STT_CLI.pdb
+/data/Projects/STT_CLI/obj/Debug/netcoreapp3.1/STT_CLI.dll
+/data/Projects/STT_CLI/obj/Debug/netcoreapp3.1/STT_CLI.pdb
