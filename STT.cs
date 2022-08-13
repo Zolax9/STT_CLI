@@ -11,6 +11,7 @@ namespace STT_CLI
 
         public List<recordType> recordTypes;
         public List<record> records;
+        public List<record> newRecords;
         public List<category> categories;
         public List<typeCategory> typeCategories;
         public List<recordTag> recordTags;
@@ -22,6 +23,7 @@ namespace STT_CLI
         {
             recordTypes = new List<recordType>();
             records = new List<record>();
+            newRecords = new List<record>();
             categories = new List<category>();
             typeCategories = new List<typeCategory>();
             recordTags = new List<recordTag>();
@@ -103,7 +105,17 @@ namespace STT_CLI
                 i++;
                 if (i == contents.Length) { break; }
             }
-            Console.WriteLine(topRecordNum);
+        }
+
+        public void AddRecord(int num, int recordType_num, long timeFrom, long timeTo, string comment)
+        {
+            newRecords.Add(new record(
+                num,
+                recordType_num,
+                timeFrom,
+                timeTo,
+                comment
+            ));
         }
     }
 }
