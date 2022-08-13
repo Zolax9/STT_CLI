@@ -24,6 +24,10 @@ namespace STT_CLI
                     case "add":
                         Add();
                         break;
+
+                    case "flush":
+                        stt.Flush();
+                        break;
                 }
             }
         }
@@ -44,18 +48,18 @@ namespace STT_CLI
                     string comment = "";
 
                     while (!stt.recordTypes.Any(n => n.title == recordType)) { recordType = AskStr("recordType? "); }
-                    recordType_num = stt.recordTypes.FindIndex(0, stt.recordTypes.Count - 1, n => n.title == recordType);
+                    recordType_num = stt.recordTypes[stt.recordTypes.FindIndex(0, stt.recordTypes.Count - 1, n => n.title == recordType)].num;
                     timeFrom = AskLong("from (unix)? ");
                     while (timeTo <= timeFrom) { timeTo = AskLong("to (unix)? "); }
                     comment = AskStr("comment? ");
                     stt.Add_record(
-                        stt.topRecordNum,
+                        stt.topRecordNum + 1,
                         recordType_num,
                         timeFrom,
                         timeTo,
                         comment
                     );
-                    Console.WriteLine(String.Format("record number: {0}", stt.topRecordNum - 1));
+                    Console.WriteLine(String.Format("record number: {0}", stt.topRecordNum));
                     break;
 
                 case "recordToRecordTag":
@@ -63,9 +67,9 @@ namespace STT_CLI
                     string recordTag = "\t";
                     int recordTag_num = -1;
 
-                    while (!stt.records.Any(n => n.num == record_num)) { record_num = AskInt("record_num? "); }
+                    while (!stt.newRecords.Any(n => n.num == record_num) && !stt.records.Any(n => n.num == record_num)) { record_num = AskInt("record_num? "); }
                     while (!stt.recordTags.Any(n => n.title == recordTag)) { recordTag = AskStr("recordTag? "); }
-                    recordTag_num = stt.recordTags.FindIndex(0, stt.recordTags.Count - 1, n => n.title == recordTag);
+                    recordTag_num = stt.recordTags[stt.recordTags.FindIndex(0, stt.recordTags.Count - 1, n => n.title == recordTag)].num;
                     stt.Add_recordToRecordTag(
                         record_num,
                         recordTag_num

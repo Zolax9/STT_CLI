@@ -21,7 +21,7 @@ namespace STT_CLI
 
         public int topRecordNum;
 
-        public STT(string file)
+        public STT(string _file)
         {
             recordTypes = new List<recordType>();
             records = new List<record>();
@@ -33,6 +33,7 @@ namespace STT_CLI
             newRecords = new List<record>();
             newRecordToRecordTags = new List<recordToRecordTag>();
 
+            file = _file;
             string[] contents = File.ReadAllLines(file);
             int i = 1; // first line is header
             string[] line;
@@ -128,6 +129,59 @@ namespace STT_CLI
                 record_num,
                 recordTag_num
             ));
+        }
+
+        public void Flush()
+        {
+            List<string> contents = File.ReadAllLines(file).ToList();
+            int i = contents.Count;
+            
+            for (int j = newRecordToRecordTags.Count - 1; j >= 0; j--)
+            {
+                contents.Insert(i, String.Format(
+                    "recordToRecordTag\t{0}\t{1}",
+                    newRecordToRecordTags[j].record_num,
+                    newRecordToRecordTags[j].recordTag_num
+                ));
+                recordToRecordTags.Insert(recordToRecordTags.Count - newRecordToRecordTags.Count, newRecordToRecordTags[j]);
+                Console.WriteLine(String.Format(
+                    "recordToRecordTag\t{0}\t{1}",
+                    newRecordToRecordTags[j].record_num,
+                    newRecordToRecordTags[j].recordTag_num
+                ));
+            }
+            i -= recordToRecordTags.Count - newRecordToRecordTags.Count;
+            i -= recordTags.Count;
+            i -= typeCategories.Count;
+            i -= categories.Count;
+            for (int j = newRecords.Count - 1; j >= 0; j--)
+            {
+                contents.Insert(i, String.Format(
+                    "record\t{0}\t{1}\t{2}\t{3}\t{4}",
+                    newRecords[j].num,
+                    newRecords[j].recordType_num,
+                    newRecords[j].timeFrom,
+                    newRecords[j].timeTo,
+                    newRecords[j].comment
+                )); 
+                records.Insert(records.Count - newRecords.Count, newRecords[j]);
+                Console.WriteLine(String.Format(
+                    "record\t{0}\t{1}\t{2}\t{3}\t{4}",
+                    newRecords[j].num,
+                    newRecords[j].recordType_num,
+                    newRecords[j].timeFrom,
+                    newRecords[j].timeTo,
+                    newRecords[j].comment
+                )); 
+            }
+            i -= records.Count - newRecords.Count;
+            i -= recordTypes.Count;
+
+            File.WriteAllLines("stt_out.backup", contents);
+            file = "stt_out.backup";
+
+            newRecords = new List<record>();
+            newRecordToRecordTags = new List<recordToRecordTag>();
         }
     }
 }
