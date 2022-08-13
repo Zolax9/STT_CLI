@@ -11,11 +11,13 @@ namespace STT_CLI
 
         public List<recordType> recordTypes;
         public List<record> records;
-        public List<record> newRecords;
         public List<category> categories;
         public List<typeCategory> typeCategories;
         public List<recordTag> recordTags;
         public List<recordToRecordTag> recordToRecordTags;
+
+        public List<record> newRecords;
+        public List<recordToRecordTag> newRecordToRecordTags;
 
         public int topRecordNum;
 
@@ -23,11 +25,13 @@ namespace STT_CLI
         {
             recordTypes = new List<recordType>();
             records = new List<record>();
-            newRecords = new List<record>();
             categories = new List<category>();
             typeCategories = new List<typeCategory>();
             recordTags = new List<recordTag>();
             recordToRecordTags = new List<recordToRecordTag>();
+
+            newRecords = new List<record>();
+            newRecordToRecordTags = new List<recordToRecordTag>();
 
             string[] contents = File.ReadAllLines(file);
             int i = 1; // first line is header
@@ -107,7 +111,7 @@ namespace STT_CLI
             }
         }
 
-        public void AddRecord(int num, int recordType_num, long timeFrom, long timeTo, string comment)
+        public void Add_record(int num, int recordType_num, long timeFrom, long timeTo, string comment)
         {
             newRecords.Add(new record(
                 num,
@@ -115,6 +119,14 @@ namespace STT_CLI
                 timeFrom,
                 timeTo,
                 comment
+            ));
+            topRecordNum++;
+        }
+        public void Add_recordToRecordTag(int record_num, int recordTag_num)
+        {
+            newRecordToRecordTags.Add(new recordToRecordTag(
+                record_num,
+                recordTag_num
             ));
         }
     }

@@ -37,7 +37,7 @@ namespace STT_CLI
             switch (input)
             {
                 case "record":
-                    string recordType = "";
+                    string recordType = "\t"; // prevent existing record type being used (can't have tabs)
                     int recordType_num;
                     long timeFrom = -1;
                     long timeTo = -1;
@@ -48,12 +48,27 @@ namespace STT_CLI
                     timeFrom = AskLong("from (unix)? ");
                     while (timeTo <= timeFrom) { timeTo = AskLong("to (unix)? "); }
                     comment = AskStr("comment? ");
-                    stt.AddRecord(
+                    stt.Add_record(
                         stt.topRecordNum,
                         recordType_num,
                         timeFrom,
                         timeTo,
                         comment
+                    );
+                    Console.WriteLine(String.Format("record number: {0}", stt.topRecordNum - 1));
+                    break;
+
+                case "recordToRecordTag":
+                    int record_num = -1;
+                    string recordTag = "\t";
+                    int recordTag_num = -1;
+
+                    while (!stt.records.Any(n => n.num == record_num)) { record_num = AskInt("record_num? "); }
+                    while (!stt.recordTags.Any(n => n.title == recordTag)) { recordTag = AskStr("recordTag? "); }
+                    recordTag_num = stt.recordTags.FindIndex(0, stt.recordTags.Count - 1, n => n.title == recordTag);
+                    stt.Add_recordToRecordTag(
+                        record_num,
+                        recordTag_num
                     );
                     break;
             }
