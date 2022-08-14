@@ -8,7 +8,7 @@ namespace STT_CLI
     {
         static STT stt;
         static string input;
-        static List<string> types = new List<string> { "recordType", "record", "category", "typeCategory", "recordTag", "recordToRecordTag" };
+        static List<string> types = new List<string> { "recordType", "record", "category", "recordTypeCategory", "recordTag", "recordToRecordTag" };
 
         static void Main(string[] args)
         {
@@ -40,39 +40,74 @@ namespace STT_CLI
 
             switch (input)
             {
+                case "recordType":
+                    string name;
+                    string icon;
+                    int color;
+                    string color_int;
+                    int hidden;
+                    string goal_time;
+
+                    name = AskStr("name? ");
+                    icon = AskStr("icon? ");
+                    color = AskInt("color? ");
+                    color_int = AskStr("color_int? ");
+                    hidden = AskInt("hidden? ");
+                    goal_time = AskStr("goal_time? ");
+                    stt.Add_recordType(
+                        stt.topRecordTypeID + 1,
+                        name,
+                        icon,
+                        color,
+                        color_int,
+                        hidden,
+                        goal_time
+                    );
+                    Console.WriteLine(String.Format("recordType_id: {0}", stt.topRecordTypeID));
+                    break;
+
                 case "record":
-                    string recordType = "\t"; // prevent existing record type being used (can't have tabs)
-                    int recordType_num;
-                    long timeFrom = -1;
-                    long timeTo = -1;
+                    string recordType_name = "\t"; // prevent existing record type being used (can't have tabs)
+                    int type_id;
+                    long time_started = -1;
+                    long time_ended = -1;
                     string comment = "";
 
-                    while (!stt.recordTypes.Any(n => n.title == recordType)) { recordType = AskStr("recordType? "); }
-                    recordType_num = stt.recordTypes[stt.recordTypes.FindIndex(0, stt.recordTypes.Count - 1, n => n.title == recordType)].num;
-                    timeFrom = AskLong("from (unix)? ");
-                    while (timeTo <= timeFrom) { timeTo = AskLong("to (unix)? "); }
+                    while (!stt.newRecordTypes.Any(n => n.name == recordType_name) && !stt.recordTypes.Any(n => n.name == recordType_name)) { recordType_name = AskStr("recordType? "); }
+                    switch (stt.newRecordTypes.Any(n => n.name == recordType_name))
+                    {
+                        case true: // not an original recordType (added via cli and not flushed yet)
+                            type_id = stt.newRecordTypes[stt.newRecordTypes.FindIndex(0, stt.newRecordTypes.Count, n => n.name == recordType_name)].id;
+                            break;
+
+                        default:
+                            type_id = stt.recordTypes[stt.recordTypes.FindIndex(0, stt.recordTypes.Count, n => n.name == recordType_name)].id;
+                            break;
+                    }
+                    time_started = AskLong("start (unix)? ");
+                    while (time_ended <= time_started) { time_ended = AskLong("end (unix)? "); }
                     comment = AskStr("comment? ");
                     stt.Add_record(
-                        stt.topRecordNum + 1,
-                        recordType_num,
-                        timeFrom,
-                        timeTo,
+                        stt.topRecordID + 1,
+                        type_id,
+                        time_started,
+                        time_ended,
                         comment
                     );
-                    Console.WriteLine(String.Format("record number: {0}", stt.topRecordNum));
+                    Console.WriteLine(String.Format("record_id: {0}", stt.topRecordID));
                     break;
 
                 case "recordToRecordTag":
-                    int record_num = -1;
-                    string recordTag = "\t";
-                    int recordTag_num = -1;
+                    int record_id = -1;
+                    string recordTag_name = "\t";
+                    int record_tag_id = -1;
 
-                    while (!stt.newRecords.Any(n => n.num == record_num) && !stt.records.Any(n => n.num == record_num)) { record_num = AskInt("record_num? "); }
-                    while (!stt.recordTags.Any(n => n.title == recordTag)) { recordTag = AskStr("recordTag? "); }
-                    recordTag_num = stt.recordTags[stt.recordTags.FindIndex(0, stt.recordTags.Count - 1, n => n.title == recordTag)].num;
+                    while (!stt.newRecords.Any(n => n.id == record_id) && !stt.records.Any(n => n.id == record_id)) { record_id = AskInt("record_id? "); }
+                    while (!stt.recordTags.Any(n => n.name == recordTag_name)) { recordTag_name = AskStr("recordTag? "); }
+                    record_tag_id = stt.recordTags[stt.recordTags.FindIndex(0, stt.recordTags.Count, n => n.name == recordTag_name)].id;
                     stt.Add_recordToRecordTag(
-                        record_num,
-                        recordTag_num
+                        record_id,
+                        record_tag_id
                     );
                     break;
             }
