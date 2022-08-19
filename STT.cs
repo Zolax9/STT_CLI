@@ -7,8 +7,8 @@ namespace STT_CLI
 {
     public class STT
     {
-        string file;
-
+        string file; // name of input backup file
+        // imported types
         public List<recordType> recordTypes;
         public List<record> records;
         public List<category> categories;
@@ -16,12 +16,21 @@ namespace STT_CLI
         public List<recordTag> recordTags;
         public List<recordToRecordTag> recordToRecordTags;
 
-        public List<recordType> newRecordTypes;
-        public List<record> newRecords;
-        public List<recordToRecordTag> newRecordToRecordTags;
+        // these are added via CLI but haven't been flushed yet
+        public List<recordType> add_recordTypes;
+        public List<record> add_records;
+        public List<recordToRecordTag> add_recordToRecordTags;
 
-        public int topRecordTypeID; // highest record type number (new records increment from here on STT)
-        public int topRecordID; // highest record number
+        // these are to be deleted by CLI but haven't been flushed yet
+        public List<int> delete_recordTypes; // both recordTypes and records have ids, so only need one property per type
+        public List<int> delete_records;
+        public List<int> delete_recordToRecordTags;
+
+        // highest ids for each type with ids (new types increment from here on STT)
+        public int top_recordType_id;
+        public int top_record_id;
+        public int top_category_id;
+        public int top_recordTag_id;
 
         public STT(string _file)
         {
@@ -32,9 +41,13 @@ namespace STT_CLI
             recordTags = new List<recordTag>();
             recordToRecordTags = new List<recordToRecordTag>();
 
-            newRecordTypes = new List<recordType>();
-            newRecords = new List<record>();
-            newRecordToRecordTags = new List<recordToRecordTag>();
+            add_recordTypes = new List<recordType>();
+            add_records = new List<record>();
+            add_recordToRecordTags = new List<recordToRecordTag>();
+
+            delete_recordTypes = new List<int>();
+            delete_records = new List<int>();
+            delete_recordToRecordTags = new List<int>();
 
             file = _file;
             string[] contents = File.ReadAllLines(file);
@@ -57,7 +70,7 @@ namespace STT_CLI
                 i++;
                 if (i == contents.Length) { break; }
             }
-            topRecordTypeID = recordTypes.Max(n => n.id);
+            top_recordType_id = recordTypes.Max(n => n.id);
             while (contents[i].Substring(0, "record\t".Length) == "record\t")
             {
                 line = contents[i].Split('\t');
@@ -72,7 +85,7 @@ namespace STT_CLI
                 i++;
                 if (i == contents.Length) { break; }
             }
-            topRecordID = records.Max(n => n.id);
+            top_record_id = records.Max(n => n.id);
             while (contents[i].Substring(0, "category\t".Length) == "category\t")
             {
                 line = contents[i].Split('\t');
@@ -86,6 +99,7 @@ namespace STT_CLI
                 i++;
                 if (i == contents.Length) { break; }
             }
+            top_category_id = categories.Max(n => n.id);
             while (contents[i].Substring(0, "typeCategory\t".Length) == "typeCategory\t")
             {
                 line = contents[i].Split('\t');
@@ -112,6 +126,7 @@ namespace STT_CLI
                 i++;
                 if (i == contents.Length) { break; }
             }
+            top_recordTag_id = recordTags.Max(n => n.id);
             while (contents[i].Substring(0, "recordToRecordTag\t".Length) == "recordToRecordTag\t")
             {
                 line = contents[i].Split('\t');
@@ -125,126 +140,256 @@ namespace STT_CLI
             }
         }
 
-        public void Add_recordType(int id, string name, string icon, int color, string color_int, int hidden, string goal_time)
+        // true = successful, false = fail (overlapping property (usually name) with non-flushed deletion)
+        public bool Add_recordType(int id, string name, string icon, int color, string color_int, int hidden, string goal_time)
         {
-            newRecordTypes.Add(new recordType(
-                id,
-                name,
-                icon,
-                color,
-                color_int,
-                hidden,
-                goal_time
-            ));
-            topRecordTypeID++;
+            switch (delete_recordTypes.Any(n => recordTypes[n].name == name))
+            {
+                case true:
+                    return false;
+
+                case false:
+                    add_recordTypes.Add(new recordType(
+                        id,
+                        name,
+                        icon,
+                        color,
+                        color_int,
+                        hidden,
+                        goal_time
+                    ));
+                    top_recordType_id++;
+                    return true;
+            }
         }
         public void Add_record(int id, int type_id, long time_started, long time_ended, string comment)
         {
-            newRecords.Add(new record(
+            add_records.Add(new record(
                 id,
                 type_id,
                 time_started,
                 time_ended,
                 comment
             ));
-            topRecordID++;
+            top_record_id++;
         }
-        public void Add_recordToRecordTag(int record_id, int record_tag_id)
+        public bool Add_recordToRecordTag(int record_id, int record_tag_id)
         {
-            newRecordToRecordTags.Add(new recordToRecordTag(
-                record_id,
-                record_tag_id
-            ));
+            switch (
+                delete_recordToRecordTags.Any(n => recordToRecordTags[n].record_id == record_id) &&
+                delete_recordToRecordTags.Any(n => recordToRecordTags[n].record_tag_id == record_tag_id)
+            ) {
+                case true:
+                    return false;
+
+                case false:
+                    add_recordToRecordTags.Add(new recordToRecordTag(
+                        record_id,
+                        record_tag_id
+                    ));
+                    return true;
+            }
         }
+        public void Delete_recordType(int elem)
+        {
+            // if the highest id of a type is deleted and needs to be changed
+            if (recordTypes[elem].id == top_recordType_id)
+            {
+                // emulates recordTypes without recordTypes set to be deleted (can't be included in getting top ID
+                List<recordType> temp = new List<recordType>();
+                temp.AddRange(recordTypes);
+
+                // removing at a list of elements requires a descending order
+                delete_recordTypes.Sort();
+                delete_recordTypes.Reverse();
+
+                for (int i = 0; i < delete_recordTypes.Count; i++) { temp.RemoveAt(delete_recordTypes[i]); }
+                top_recordType_id = temp.Max(n => n.id);
+            }
+            delete_recordTypes.Add(elem);
+        }
+        public void Delete_add_recordType(int elem) { add_recordTypes.RemoveAt(elem); }
+        public void Delete_record(int elem)
+        {
+            if (records[elem].id == top_record_id)
+            {
+                List<record> temp = new List<record>();
+                temp.AddRange(records);
+
+                delete_records.Sort();
+                delete_records.Reverse();
+
+                for (int i = 0; i < delete_records.Count; i++) { temp.RemoveAt(delete_records[i]); }
+                top_record_id = temp.Max(n => n.id);
+            }
+            delete_recordTypes.Add(elem);
+        }
+        public void Delete_add_record(int elem) { add_records.RemoveAt(elem); }
+        public void Delete_recordToRecordTag(int elem) { delete_recordTypes.Add(elem); }
+        public void Delete_add_recordToRecordTag(int elem) { add_recordTypes.RemoveAt(elem); }
 
         public void Flush()
         {
             List<string> contents = File.ReadAllLines(file).ToList();
             int i = contents.Count;
-            
-            for (int j = newRecordToRecordTags.Count - 1; j >= 0; j--)
+
+            Console.WriteLine("added:");
+            for (int j = add_recordToRecordTags.Count - 1; j >= 0; j--)
             {
                 contents.Insert(i, String.Format(
                     "recordToRecordTag\t{0}\t{1}",
-                    newRecordToRecordTags[j].record_id,
-                    newRecordToRecordTags[j].record_tag_id
+                    add_recordToRecordTags[j].record_id,
+                    add_recordToRecordTags[j].record_tag_id
                 ));
-                recordToRecordTags.Insert(recordToRecordTags.Count - newRecordToRecordTags.Count, newRecordToRecordTags[j]);
+                recordToRecordTags.Insert(recordToRecordTags.Count - add_recordToRecordTags.Count, add_recordToRecordTags[j]);
                 Console.WriteLine(String.Format(
-                    "recordToRecordTag\t{0}\t{1}",
-                    newRecordToRecordTags[j].record_id,
-                    newRecordToRecordTags[j].record_tag_id
+                    "  recordToRecordTag\t{0}\t{1}",
+                    add_recordToRecordTags[j].record_id,
+                    add_recordToRecordTags[j].record_tag_id
                 ));
             }
-            i -= recordToRecordTags.Count - newRecordToRecordTags.Count;
+            i -= recordToRecordTags.Count - add_recordToRecordTags.Count;
             i -= recordTags.Count;
             i -= recordTypeCategories.Count;
             i -= categories.Count;
-            for (int j = newRecords.Count - 1; j >= 0; j--)
+            for (int j = add_records.Count - 1; j >= 0; j--)
             {
                 contents.Insert(i, String.Format(
                     "record\t{0}\t{1}\t{2}\t{3}\t{4}",
-                    newRecords[j].id,
-                    newRecords[j].type_id,
-                    newRecords[j].time_started,
-                    newRecords[j].time_ended,
-                    newRecords[j].comment
+                    add_records[j].id,
+                    add_records[j].type_id,
+                    add_records[j].time_started,
+                    add_records[j].time_ended,
+                    add_records[j].comment
                 )); 
-                records.Insert(records.Count - newRecords.Count, newRecords[j]);
+                records.Insert(records.Count - add_records.Count, add_records[j]);
                 Console.WriteLine(String.Format(
-                    "record\t{0}\t{1}\t{2}\t{3}\t{4}",
-                    newRecords[j].id,
-                    newRecords[j].type_id,
-                    newRecords[j].time_started,
-                    newRecords[j].time_ended,
-                    newRecords[j].comment
+                    "  record\t{0}\t{1}\t{2}\t{3}\t{4}",
+                    add_records[j].id,
+                    add_records[j].type_id,
+                    add_records[j].time_started,
+                    add_records[j].time_ended,
+                    add_records[j].comment
                 )); 
             }
-            i -= records.Count - newRecords.Count;
-            for (int j = newRecordTypes.Count - 1; j >= 0; j--)
+            i -= records.Count - add_records.Count;
+            for (int j = add_recordTypes.Count - 1; j >= 0; j--)
             {
                 contents.Insert(i, String.Format(
                     "recordType\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
-                    newRecordTypes[j].id,
-                    newRecordTypes[j].name,
-                    newRecordTypes[j].icon,
-                    newRecordTypes[j].color,
-                    newRecordTypes[j].color_int,
-                    newRecordTypes[j].hidden,
-                    newRecordTypes[j].goal_time
+                    add_recordTypes[j].id,
+                    add_recordTypes[j].name,
+                    add_recordTypes[j].icon,
+                    add_recordTypes[j].color,
+                    add_recordTypes[j].color_int,
+                    add_recordTypes[j].hidden,
+                    add_recordTypes[j].goal_time
                 )); 
-                recordTypes.Insert(recordTypes.Count - newRecordTypes.Count, newRecordTypes[j]);
+                recordTypes.Insert(recordTypes.Count - add_recordTypes.Count, add_recordTypes[j]);
                 Console.WriteLine(String.Format(
-                    "recordType\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
-                    newRecordTypes[j].id,
-                    newRecordTypes[j].name,
-                    newRecordTypes[j].icon,
-                    newRecordTypes[j].color,
-                    newRecordTypes[j].color_int,
-                    newRecordTypes[j].hidden,
-                    newRecordTypes[j].goal_time
+                    "  recordType\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
+                    add_recordTypes[j].id,
+                    add_recordTypes[j].name,
+                    add_recordTypes[j].icon,
+                    add_recordTypes[j].color,
+                    add_recordTypes[j].color_int,
+                    add_recordTypes[j].hidden,
+                    add_recordTypes[j].goal_time
                 )); 
             }
-            i -= recordTypes.Count - newRecordTypes.Count;
+            i -= recordTypes.Count - add_recordTypes.Count;
+
+            Console.WriteLine("deleted:");
+            delete_recordToRecordTags.Sort();
+            delete_recordToRecordTags.Reverse();
+            for (int j = delete_recordToRecordTags.Count - 1; j >= 0; j--)
+            {
+                contents.RemoveAt(contents.FindIndex(
+                    0,
+                    contents.Count,
+                    n => n == String.Format(
+                        "recordToRecordTag\t{0}\t{1}",
+                        recordToRecordTags[delete_recordToRecordTags[j]].record_id,
+                        recordToRecordTags[delete_recordToRecordTags[j]].record_tag_id
+                    )
+                ));
+                Console.WriteLine(String.Format(
+                    "  recordToRecordTag\t{0}\t{1}",
+                    recordToRecordTags[delete_recordToRecordTags[j]].record_id,
+                    recordToRecordTags[delete_recordToRecordTags[j]].record_tag_id
+                ));
+                recordToRecordTags.RemoveAt(delete_recordToRecordTags[j]);
+            }
+            i -= recordToRecordTags.Count + delete_recordToRecordTags.Count;
+            i -= recordTags.Count;
+            i -= recordTypeCategories.Count;
+            i -= categories.Count;
+            // don't need to sort delete_records (already done in delete_record())
+            for (int j = delete_records.Count - 1; j >= 0; j--)
+            {
+                contents.RemoveAt(contents.FindIndex(
+                    0,
+                    contents.Count,
+                    n => n == String.Format(
+                        "record\t{0}\t{1}\t{2}\t{3}\t{4}",
+                        records[delete_records[j]].id,
+                        records[delete_records[j]].type_id,
+                        records[delete_records[j]].time_started,
+                        records[delete_records[j]].time_ended,
+                        records[delete_records[j]].comment
+                    )
+                ));
+                Console.WriteLine(String.Format(
+                    "  record\t{0}\t{1}\t{2}\t{3}\t{4}",
+                    records[delete_records[j]].id,
+                    records[delete_records[j]].type_id,
+                    records[delete_records[j]].time_started,
+                    records[delete_records[j]].time_ended,
+                    records[delete_records[j]].comment
+                ));
+                records.RemoveAt(delete_records[j]);
+            }
+            i -= records.Count + delete_records.Count;
+            for (int j = delete_recordTypes.Count - 1; j >= 0; j--)
+            {
+                contents.RemoveAt(contents.FindIndex(
+                    0,
+                    contents.Count,
+                    n => n == String.Format(
+                        "recordType\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
+                        recordTypes[delete_recordTypes[j]].id,
+                        recordTypes[delete_recordTypes[j]].name,
+                        recordTypes[delete_recordTypes[j]].icon,
+                        recordTypes[delete_recordTypes[j]].color,
+                        recordTypes[delete_recordTypes[j]].color_int,
+                        recordTypes[delete_recordTypes[j]].hidden,
+                        recordTypes[delete_recordTypes[j]].goal_time
+                    )
+                ));
+                Console.WriteLine(String.Format(
+                    "  recordType\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
+                    recordTypes[delete_recordTypes[j]].id,
+                    recordTypes[delete_recordTypes[j]].name,
+                    recordTypes[delete_recordTypes[j]].icon,
+                    recordTypes[delete_recordTypes[j]].color,
+                    recordTypes[delete_recordTypes[j]].color_int,
+                    recordTypes[delete_recordTypes[j]].hidden,
+                    recordTypes[delete_recordTypes[j]].goal_time
+                )); 
+                recordTypes.RemoveAt(delete_recordTypes[j]);
+            }
+            i -= recordTypes.Count + delete_recordTypes.Count;
 
             File.WriteAllLines("stt_out.backup", contents);
             file = "stt_out.backup";
 
-            newRecordTypes = new List<recordType>();
-            newRecords = new List<record>();
-            newRecordToRecordTags = new List<recordToRecordTag>();
-        }
+            add_recordTypes = new List<recordType>();
+            add_records = new List<record>();
+            add_recordToRecordTags = new List<recordToRecordTag>();
 
-        public string BlankToZero(string val) // some values are blank, so need to be parsable to an integer (in this case, zero)
-        {
-            switch (val)
-            {
-                case "":
-                    return "0";
-
-                default:
-                    return val;
-            }
+            delete_recordTypes = new List<int>();
+            delete_records = new List<int>();
+            delete_recordToRecordTags = new List<int>();
         }
     }
 }

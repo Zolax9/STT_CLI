@@ -8,7 +8,12 @@ namespace STT_CLI
     {
         static STT stt;
         static string input;
-        static List<string> types = new List<string> { "ty", "recordType", "r", "record", "c", "category", "tc", "recordTypeCategory", "ta", "recordTag", "rt", "recordToRecordTag" };
+        // static List<string> types = new List<string> { "ty", "recordType", "r", "record", "c", "category", "tc", "recordTypeCategory", "ta", "recordTag", "rt", "recordToRecordTag" };
+        static List<string> types = new List<string> {
+            "ty", "recordType",
+             "r", "record",
+             "rt", "recordToRecordTag"
+        }; // types supported so far
         static bool cancel; // if 'cancel' is inputted
 
         static void Main(string[] args)
@@ -16,7 +21,7 @@ namespace STT_CLI
             stt = new STT(args[0]);
             input = "";
 
-            while (input != "exit")
+            while (input != "exit" && input != "e")
             {
                 input = AskStr("> ");
 
@@ -27,12 +32,17 @@ namespace STT_CLI
                         Add(out cancel);
                         break;
 
+                    case string n when (n == "d" || n == "delete"):
+                        cancel = false;
+                        Delete(out cancel);
+                        break;
+
                     case string n when (n == "f" || n == "flush"):
                         stt.Flush();
                         break;
 
                     case string n when (n == "h" || n == "help"):
-                        Console.WriteLine("actions:\n  a, add / a\t\t\tadd a type\n  e, exit\t\t\texit CLI\n  f, flush\t\t\tsave all changes to 'stt_out.backup'\n  h, help\t\t\tdisplay this help information\n\ntypes:\n  ty, recordType\t\ttype of record\n  r, record\t\t\tsingle record\n  c, category\t\t\tgroups of record types (WIP)\n  tc, recordTypeCategory\tassigns a record type to a category (WIP)\n  ta, recordTag\t\t\ttags appliable to records (WIP)\n  rt, recordToRecordTag\t\tassigns a record tag to a record");
+                        Console.WriteLine("actions:\n  a, add / a\t\t\tadd a type\n  d, delete\t\t\tdelete a type\n  x, exit\t\t\texit CLI\n  f, flush\t\t\tsave all changes to 'stt_out.backup'\n  h, help\t\t\tdisplay this help information\n\ntypes:\n  ty, recordType\t\ttype of record\n  r, record\t\t\tsingle record\n  c, category\t\t\tgroups of record types (WIP)\n  tc, recordTypeCategory\tassigns a record type to a category (WIP)\n  ta, recordTag\t\t\ttags appliable to records (WIP)\n  rt, recordToRecordTag\t\tassigns a record tag to a record");
                         break;
                 }
             }
@@ -41,9 +51,14 @@ namespace STT_CLI
         static void Add(out bool cancel)
         {
             string input = "";
-            cancel = false;
+            bool exit = false;
+            bool exit2 = false; // for use in double while loops
 
-            while (!types.Any(n => n == input) && !cancel) {input = AskStr("type? ", out cancel); }
+            cancel = false;
+            while (
+                !types.Any(n => n == input) &&
+                !cancel
+            ) {input = AskStr("type? ", out cancel); }
             if (cancel) { return; }
 
             switch (input)
@@ -56,40 +71,64 @@ namespace STT_CLI
                     int hidden;
                     string goal_time;
 
-                    name = AskStr("name? ", out cancel);
-                    if (cancel) { return; }
-                    icon = AskStr("icon? ");
-                    color = AskInt("color? ", out cancel);
-                    if (cancel) { return; }
-                    color_int = AskStr("color_int? ");
-                    hidden = AskInt("hidden? ", out cancel);
-                    if (cancel) { return; }
-                    goal_time = AskStr("goal_time? ");
-                    stt.Add_recordType(
-                        stt.topRecordTypeID + 1,
-                        name,
-                        icon,
-                        color,
-                        color_int,
-                        hidden,
-                        goal_time
-                    );
-                    Console.WriteLine(String.Format("recordType_id: {0}", stt.topRecordTypeID));
+                    while (!exit)
+                    {
+                        name = AskStr("name? ", out cancel);
+                        if (cancel) { return; }
+                        icon = AskStr("icon? ");
+                        color = AskInt("color? ", out cancel);
+                        if (cancel) { return; }
+                        color_int = AskStr("color_int? ");
+                        hidden = AskInt("hidden? ", out cancel);
+                        if (cancel) { return; }
+                        goal_time = AskStr("goal_time? ");
+                    
+                        switch (stt.Add_recordType(
+                            stt.top_recordType_id + 1,
+                            name,
+                            icon,
+                            color,
+                            color_int,
+                            hidden,
+                            goal_time
+                        )) {
+                            case true:
+                                exit = true;
+                                break;
+
+                            case false:
+                                Console.WriteLine("you need to flush first. (recordType set for deletion has the same name)");
+                                break;
+                        }
+                    }
+                    Console.WriteLine(String.Format("recordType_id: {0}", stt.top_recordType_id));
                     break;
 
                 case string n when (n == "r" || n == "record"):
-                    string recordType_name = "\t"; // prevent existing record type being used (can't have tabs)
+                    string recordType_name = "\n"; // prevent existing record type being used (can't have newlines)
                     int type_id;
                     long time_started = -1;
                     long time_ended = -1;
                     string comment = "";
 
-                    while (!stt.newRecordTypes.Any(n => n.name == recordType_name) && !stt.recordTypes.Any(n => n.name == recordType_name) && !cancel) { recordType_name = AskStr("recordType? ", out cancel); }
+                    // too many conditions to stay and escape to loop while on all conditions
+                    while (!exit)
+                    {
+                        recordType_name = AskStr("recordType? ", out cancel);
+                        if (cancel) { exit = true; }
+                        if (!stt.delete_recordTypes.Any(n => stt.recordTypes[n].name == recordType_name))
+                        {
+                            if (
+                                stt.add_recordTypes.Any(n => n.name == recordType_name) ||
+                                stt.recordTypes.Any(n => n.name == recordType_name)
+                            ) { exit = true; }
+                        }
+                    }
                     if (cancel) { return; }
-                    switch (stt.newRecordTypes.Any(n => n.name == recordType_name))
+                    switch (stt.add_recordTypes.Any(n => n.name == recordType_name))
                     {
                         case true: // not an original recordType (added via cli and not flushed yet)
-                            type_id = stt.newRecordTypes[stt.newRecordTypes.FindIndex(0, stt.newRecordTypes.Count, n => n.name == recordType_name)].id;
+                            type_id = stt.add_recordTypes[stt.add_recordTypes.FindIndex(0, stt.add_recordTypes.Count, n => n.name == recordType_name)].id;
                             break;
 
                         default:
@@ -102,35 +141,162 @@ namespace STT_CLI
                     if (cancel) { return; }
                     comment = AskStr("comment? ");
                     stt.Add_record(
-                        stt.topRecordID + 1,
+                        stt.top_record_id + 1,
                         type_id,
                         time_started,
                         time_ended,
                         comment
                     );
-                    Console.WriteLine(String.Format("record_id: {0}", stt.topRecordID));
+                    Console.WriteLine(String.Format("record_id: {0}", stt.top_record_id));
                     break;
 
                 case string n when (n == "rt" || n == "recordToRecordTag"):
                     int record_id = -1;
-                    string recordTag_name = "\t";
                     int record_tag_id = -1;
 
-                    while (!stt.newRecords.Any(n => n.id == record_id) && !stt.records.Any(n => n.id == record_id) && !cancel) { record_id = AskInt("record_id? ", out cancel); }
-                    if (cancel) { return; }
-                    while (!stt.recordTags.Any(n => n.name == recordTag_name) && !cancel) { recordTag_name = AskStr("recordTag? ", out cancel); }
-                    if (cancel) { return; }
-                    record_tag_id = stt.recordTags[stt.recordTags.FindIndex(0, stt.recordTags.Count, n => n.name == recordTag_name)].id;
-                    stt.Add_recordToRecordTag(
-                        record_id,
-                        record_tag_id
-                    );
+                    while (!exit2)
+                    {
+                        exit = false;
+                        while (!exit)
+                        {
+                            record_id = AskInt("record_id? ", out cancel);
+                            if (!cancel) { exit = true; }
+                            if (!stt.delete_records.Any(n => stt.records[n].id == record_id))
+                            {
+                                if (
+                                    stt.add_records.Any(n => n.id == record_id) ||
+                                    stt.records.Any(n => n.id == record_id)
+                                ) { exit = true; }
+                            }
+                        }
+                        if (cancel) { return; }
+
+                        exit = false;
+                        while (!exit)
+                        {
+
+                        }
+
+                        while (
+                            !stt.recordTags.Any(n => n.id == record_tag_id) &&
+                            !cancel
+                        ) { record_tag_id = AskInt("record_tag_id? ", out cancel); }
+                        if (cancel) { return; }
+
+                        switch (stt.Add_recordToRecordTag(
+                            record_id,
+                            record_tag_id
+                        ))
+                        {
+                            case true:
+                                exit2 = true;
+                                break;
+
+                            case false:
+                                Console.WriteLine("you need to flush first. (recordToRecordTag set for deletion has same properties)");
+                                break;
+                        }
+                    }
                     break;
 
                 case "":
                     cancel = true;
                     return;
             }
+        }
+
+        static void Delete(out bool cancel)
+        {
+            string input = "";
+            cancel = false;
+            while (
+                !types.Any(n => n == input) &&
+                !cancel
+            ) {input = AskStr("type? ", out cancel); }
+            if (cancel) { return; }
+
+            int id;
+            switch (input)
+            {
+                case string n when (n == "ty" || n == "recordType"):
+                    id = -1;
+                    string name;
+
+                    while (
+                        !stt.add_recordTypes.Any(n => n.id == id) &&
+                        !stt.recordTypes.Any(n => n.id == id) &&
+                        !cancel
+                    ) { id = AskInt("id? ", out cancel); }
+                    if (cancel) { return; }
+                    switch (stt.add_recordTypes.Any(n => n.id == id))
+                    {
+                        case true: //  deleting a new recordType (added via cli and not flushed yet)
+                            name = stt.add_recordTypes[stt.add_recordTypes.FindIndex(0, stt.add_recordTypes.Count, n => n.id == id)].name;
+                            Console.WriteLine(String.Format("deleting \"{0}\"", name));
+                            stt.Delete_add_recordType(stt.add_recordTypes.FindIndex(0, stt.add_recordTypes.Count, n => n.id == id));
+                            break;
+
+                        default:
+                            name = stt.recordTypes[stt.recordTypes.FindIndex(0, stt.recordTypes.Count, n => n.id == id)].name;
+                            Console.WriteLine(String.Format("deleting \"{0}\"", name));
+                            stt.Delete_recordType(stt.recordTypes.FindIndex(0, stt.recordTypes.Count, n => n.id == id));
+                            break;
+                    }
+                    break;
+
+                case string n when (n == "r" || n == "record"):
+                    id = -1;
+
+                    while (
+                        !stt.add_records.Any(n => n.id == id) &&
+                        !stt.records.Any(n => n.id == id) &&
+                        !cancel
+                    ) { id = AskInt("id? ", out cancel); }
+                    if (cancel) { return; }
+                    switch (stt.add_records.Any(n => n.id == id))
+                    {
+                        case true:
+                            stt.Delete_add_record(stt.add_records.FindIndex(0, stt.add_records.Count, n => n.id == id));
+                            break;
+
+                        default:
+                            stt.Delete_record(stt.records.FindIndex(0, stt.records.Count, n => n.id == id));
+                            break;
+                    }
+                    break;
+
+                case string n when (n == "rt" || n == "recordToRecordTag"):
+                    int record_id = -1;
+                    int record_tag_id = -1;
+
+                    while (
+                        !stt.add_records.Any(n => n.id == record_id) &&
+                        !stt.records.Any(n => n.id == record_id) &&
+                        !cancel
+                    ) { record_id = AskInt("record_id? ", out cancel); }
+                    if (cancel) { return; }
+                    while (
+                        !stt.recordTags.Any(n => n.id == record_tag_id) &&
+                        !cancel
+                    ) { record_tag_id = AskInt("record_tag_id? ", out cancel); }
+                    if (cancel) { return; }
+                    switch (stt.add_recordToRecordTags.Any(n => n.record_id == record_id && n.record_tag_id == record_tag_id))
+                    {
+                        case true:
+                            stt.Delete_add_recordToRecordTag(stt.add_recordToRecordTags.FindIndex(0, stt.add_recordToRecordTags.Count, n => n.record_id == record_id && n.record_tag_id == record_tag_id));
+                            break;
+
+                        default:
+                            stt.Delete_recordToRecordTag(stt.recordToRecordTags.FindIndex(0, stt.recordToRecordTags.Count, n => n.record_id == record_id && n.record_tag_id == record_tag_id));
+                            break;
+                    }
+                    break;
+
+                case "":
+                    cancel = true;
+                    return;
+            }
+
         }
 
         static string AskStr(string prompt, out bool cancel)
